@@ -1,0 +1,428 @@
+Tuyệt.
+👉 Scope MVP đã CHỐT.
+👉 Không còn câu hỏi mở.
+👉 Bây giờ thứ bạn cần là **WORKFLOW LÀM VIỆC VỚI CURSOR TRONG 3 NGÀY**
+để:
+
+* không lệch hướng
+* không over-engineer
+* không phá UX
+* không tự ý thêm thứ thừa
+* ra sản phẩm chạy được thật.
+
+Mình viết cho bạn **workflow chuẩn từng ngày + từng bước + từng prompt nhỏ**.
+
+---
+
+# 🎯 TƯ DUY KHI LÀM VIỆC VỚI CURSOR
+
+Bạn phải coi Cursor như **1 dev junior**:
+
+* Nó rất nhanh
+* Nhưng không có product sense
+* Rất hay:
+
+  * thêm auth
+  * thêm DB xịn
+  * thêm model khác
+  * làm desktop UI trước
+  * refactor lung tung
+
+👉 Nhiệm vụ của bạn:
+**khóa scope + khóa kiến trúc + khóa timeline.**
+
+---
+
+# 🧭 WORKFLOW TỔNG THỂ 3 NGÀY
+
+```
+DAY 1 → Backend core + Kling Motion Control
+DAY 2 → Upload + Frontend + Payment + TikTok Downloader
+DAY 3 → UX + Hardening + Demo
+```
+
+Mỗi ngày bạn làm theo đúng 5 bước:
+
+```
+1) Dán prompt ngày đó
+2) Cho Cursor sinh code
+3) Chạy local
+4) Test flow
+5) Paste code lỗi về đây
+```
+
+---
+
+# =========================
+
+# 🗓️ DAY 1 — BACKEND CORE + AI
+
+# =========================
+
+🎯 Mục tiêu:
+
+* Gọi được Kling Motion Control API
+* Poll job
+* Nhận output_url
+* Test bằng URL ảnh/video public
+* Hỗ trợ LipSync (giữ âm thanh gốc hoặc audio riêng)
+
+---
+
+## STEP 1 — Dán PROMPT DAY 1 cho Cursor
+
+👉 (Bạn đã có prompt lớn mình viết ở trên)
+Nhưng workflow đúng là:
+
+* Mở Cursor
+* Mở thư mục:
+
+  ```
+  D:\AIdancing
+  ```
+* Dán prompt DAY 1 (backend core)
+
+---
+
+## STEP 2 — Cho Cursor sinh code
+
+Cursor phải tạo:
+
+```
+D:\AIdancing\backend\
+  ├─ server.js
+  ├─ worker.js
+  ├─ jobStore.js
+  ├─ klingClient.js
+  ├─ package.json
+```
+
+---
+
+## STEP 3 — Bạn kiểm tra NGAY
+
+Bạn không chạy vội.
+
+Bạn check:
+
+* ❌ Có auth không? → xoá
+* ❌ Có credit không? → xoá
+* ❌ Có DB xịn không? → xoá
+* ❌ Có Redis không? → xoá
+* ❌ Có Docker không? → xoá
+
+Nếu có → nói thẳng với Cursor:
+
+> "Remove auth/DB/Redis/Docker. Keep in-memory only. Follow DAY 1 scope strictly."
+
+---
+
+## STEP 4 — Set env + chạy local
+
+```
+KLING_API_KEY=xxx
+KLING_BASE_URL=https://api.klingai.com (hoặc URL từ tài liệu)
+KLING_MODEL_VERSION=motion-control (hoặc version cụ thể)
+```
+
+Chạy:
+
+```
+cd backend
+npm install
+node server.js
+node worker.js
+```
+
+---
+
+## STEP 5 — Test end-to-end
+
+```
+POST /api/dancing/create-job
+{
+  image_url: "...public image...",
+  video_url: "...public video...",
+  keep_original_sound: true (hoặc audio_url nếu có audio riêng)
+}
+```
+
+Poll:
+
+```
+GET /api/dancing/job-status/:job_id
+```
+
+---
+
+## ✅ TIÊU CHÍ XONG DAY 1
+
+* Có job_id
+* Worker gọi Kling Motion Control API
+* Poll được status
+* Có output_url
+* Mở video xem được
+* Video có chuyển động từ video gốc, áp dụng lên ảnh
+* LipSync hoạt động (nếu có audio)
+
+---
+
+# =========================
+
+# 🗓️ DAY 2 — UPLOAD + FRONTEND + PAYMENT + TIKTOK
+
+# =========================
+
+🎯 Mục tiêu:
+
+* User làm được mọi thứ bằng giao diện
+* Có thanh toán Base
+* Có TikTok downloader
+* Mobile-first
+
+---
+
+## STEP 1 — Dán PROMPT DAY 2 cho Cursor
+
+Bạn nói rõ:
+
+> "Continue from existing backend code.
+> Do NOT refactor architecture.
+> Implement DAY 2 only."
+
+---
+
+## STEP 2 — Backend DAY 2
+
+Cursor phải thêm:
+
+```
+POST /api/dancing/upload
+POST /api/dancing/verify-payment
+POST /api/tiktok/download
+```
+
+Local storage:
+
+```
+D:\AIdancing\uploads\
+  ├─ images\
+  ├─ videos\
+  ├─ tiktok\
+```
+
+---
+
+## STEP 3 — Frontend init
+
+Cursor phải tạo:
+
+```
+D:\AIdancing\frontend\
+```
+
+Tech:
+
+* Next.js hoặc React
+* Mobile-first
+* 4 page:
+
+```
+/            → Homepage
+/create      → AI Dancing
+/result/:id  → Result
+/tiktok      → TikTok Downloader
+```
+
+---
+
+## STEP 4 — UI đúng scope
+
+Bạn check:
+
+* ❌ Có login không? → xoá
+* ❌ Có credit không? → xoá
+* ❌ Có nhiều model không? → xoá (chỉ dùng Kling Motion Control)
+* ❌ Có model khác ngoài Kling Motion Control không? → xoá
+
+Homepage phải có 3 block:
+
+```
+AI Dancing
+Download TikTok
+Referral (Coming Soon)
+```
+
+---
+
+## STEP 5 — Flow test
+
+Bạn test:
+
+1. Homepage → Create
+2. Upload image
+3. Upload video
+4. Connect wallet
+5. Pay on Base
+6. Verify tx
+7. Create job
+8. Poll
+9. Result page
+10. Download
+
+---
+
+## ✅ TIÊU CHÍ XONG DAY 2
+
+* Không cần Postman
+* Làm hết bằng UI
+* Pay → Generate → Result chạy được
+* TikTok downloader chạy được
+* Mobile dùng OK
+
+---
+
+# =========================
+
+# 🗓️ DAY 3 — UX + HARDENING
+
+# =========================
+
+🎯 Mục tiêu:
+
+* Demo được cho user thật
+* Không crash vặt
+* UX đỡ ngu
+
+---
+
+## STEP 1 — Dán PROMPT DAY 3 cho Cursor
+
+Bạn nói rõ:
+
+> "Do NOT refactor architecture.
+> Do NOT add new features.
+> Implement DAY 3 only."
+
+---
+
+## STEP 2 — Backend hardening
+
+Cursor phải thêm:
+
+* Rate limit (per IP/session)
+* Timeout job
+* Retry job 1 lần
+* Limit:
+
+  * 1 job / session
+
+---
+
+## STEP 3 — Frontend UX
+
+Cursor phải thêm:
+
+* Loading spinner
+* Disable button
+* Error messages
+* Retry
+* Success message
+
+---
+
+## STEP 4 — Demo flow
+
+Bạn test lại full flow:
+
+* Mobile Safari
+* Mobile Chrome
+* Desktop
+
+---
+
+## ✅ TIÊU CHÍ XONG DAY 3
+
+* Không crash
+* Không spam
+* Không click bậy
+* Demo được cho user
+* Thu tiền được
+* Xuất video được
+
+---
+
+# 🧠 QUY TẮC SỐNG CÒN KHI LÀM VỚI CURSOR
+
+Bạn phải giữ 5 rule này:
+
+---
+
+### RULE 1
+
+> Mỗi ngày 1 prompt riêng.
+> Không gộp ngày.
+
+---
+
+### RULE 2
+
+> Cursor làm xong →
+> Bạn test →
+> Bug →
+> Paste code lỗi về đây.
+
+---
+
+### RULE 3
+
+> Cursor thêm thứ ngoài scope →
+> Bảo nó xoá ngay.
+
+---
+
+### RULE 4
+
+> Không cho Cursor refactor kiến trúc.
+
+---
+
+### RULE 5
+
+> Không cho Cursor thêm model khác (ngoài Kling Motion Control).
+> Chỉ dùng Kling Motion Control cho MVP.
+
+---
+
+# 🧩 TÓM TẮT 1 CÂU
+
+> Workflow 3 ngày của bạn là:
+>
+> DAY 1 → backend sống (Kling Motion Control)
+> DAY 2 → UI + payment + upload
+> DAY 3 → UX + hardening
+>
+> Mỗi ngày:
+>
+> * 1 prompt
+> * 1 scope
+> * test
+> * fix
+> * không bẻ hướng.
+
+---
+
+# 🚀 BƯỚC TIẾP THEO NGAY BÂY GIỜ
+
+Nếu bạn OK workflow này:
+
+👉 Mình sẽ viết cho bạn:
+
+* **PROMPT DAY 1 hoàn chỉnh cuối cùng**
+  (dán vào Cursor là nó code đúng backend luôn)
+
+Chỉ cần bạn nói:
+
+> **“Viết prompt DAY 1 cho Cursor.”**
+
+Mình triển khai ngay.

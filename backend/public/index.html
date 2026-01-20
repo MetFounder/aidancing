@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Dancing - Motion Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg-dark:#0f0f0f;--bg-card:#1a1a1a;--bg-card-light:#222;
+            --text-primary:#fff;--text-secondary:#a0a0a0;
+            --accent-green:#10b981;--accent-orange:#f97316;--accent-blue:#3b82f6;
+            --border-radius:14px;--border:1px solid rgba(255,255,255,.1)
+        }
+        body{
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+            background:var(--bg-dark);color:var(--text-primary);min-height:100vh;padding-bottom:100px;
+            -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale
+        }
+        .header{
+            position:sticky;top:0;background:var(--bg-dark);height:48px;display:flex;
+            align-items:center;justify-content:space-between;padding:0 16px;z-index:100;border-bottom:var(--border)
+        }
+        .header-left{width:40px;display:flex;align-items:center}
+        .header-center{flex:1;text-align:center;font-size:16px;font-weight:600}
+        .header-right{min-width:120px;display:flex;justify-content:flex-end;align-items:center}
+        .btn-close{
+            background:none;border:none;color:var(--text-primary);font-size:24px;
+            cursor:pointer;padding:8px;line-height:1
+        }
+        .dropdown{
+            background:var(--bg-card);border:var(--border);border-radius:8px;
+            padding:6px 12px;color:var(--text-primary);font-size:12px;cursor:pointer
+        }
+        .tabs{
+            display:flex;gap:8px;padding:12px 16px;background:var(--bg-dark);
+            overflow-x:auto;-webkit-overflow-scrolling:touch
+        }
+        .tabs::-webkit-scrollbar{display:none}
+        .tab{
+            flex-shrink:0;padding:10px 20px;background:var(--bg-card);border:none;
+            border-radius:var(--border-radius);color:var(--text-secondary);font-size:14px;
+            font-weight:500;cursor:pointer;transition:all .2s
+        }
+        .tab.active{background:var(--bg-card-light);color:var(--text-primary)}
+        .container{max-width:100%;padding:0 16px}
+        .card{
+            background:var(--bg-card);border-radius:var(--border-radius);
+            padding:16px;margin-bottom:16px
+        }
+        .card-title{
+            display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;
+            margin-bottom:12px;color:var(--text-primary)
+        }
+        .icon-info{
+            width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.2);
+            display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-secondary)
+        }
+        .upload-area{
+            border:2px dashed rgba(255,255,255,.2);border-radius:var(--border-radius);
+            padding:32px 16px;text-align:center;cursor:pointer;transition:all .2s;
+            background:rgba(255,255,255,.02);position:relative;min-height:200px;
+            display:flex;flex-direction:column;align-items:center;justify-content:center
+        }
+        .upload-area:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.05)}
+        .upload-area.has-file{border:none;padding:0;min-height:auto;cursor:default}
+        .upload-area.has-file:hover{background:transparent}
+        .upload-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center}
+        .upload-area.has-file .upload-placeholder{display:none}
+        .upload-icon{font-size:48px;margin-bottom:12px;opacity:.6}
+        .upload-text{font-size:12px;color:var(--text-secondary);line-height:1.5}
+        .upload-preview{
+            width:100%;border-radius:var(--border-radius);overflow:hidden;
+            position:relative;display:none
+        }
+        .upload-area.has-file .upload-preview{display:block}
+        .upload-preview img,.upload-preview video{width:100%;height:auto;display:block;cursor:pointer}
+        .delete-btn{
+            position:absolute;top:8px;right:8px;width:32px;height:32px;
+            background:rgba(0,0,0,.7);border:none;border-radius:50%;color:#fff;
+            font-size:18px;cursor:pointer;display:flex;align-items:center;
+            justify-content:center;z-index:10;transition:all .2s
+        }
+        .delete-btn:hover{background:rgba(239,68,68,.9);transform:scale(1.1)}
+        .video-play-overlay{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:64px;height:64px;background:rgba(0,0,0,.6);border-radius:50%;
+            display:flex;align-items:center;justify-content:center;font-size:32px;
+            color:#fff;cursor:pointer;z-index:5;transition:all .2s
+        }
+        .video-play-overlay:hover{background:rgba(0,0,0,.8);transform:translate(-50%,-50%) scale(1.1)}
+        .upload-preview video:not([paused])~.video-play-overlay{display:none!important}
+        .preset-grid{
+            display:flex;gap:12px;overflow-x:auto;padding:12px 0;
+            -webkit-overflow-scrolling:touch
+        }
+        .preset-grid::-webkit-scrollbar{display:none}
+        .preset-item{flex-shrink:0;width:120px;position:relative;cursor:pointer}
+        .preset-thumb{
+            width:120px;height:160px;border-radius:var(--border-radius);
+            background:var(--bg-card-light);overflow:hidden;position:relative;
+            border:2px solid transparent;transition:all .2s
+        }
+        .preset-item.selected .preset-thumb{border-color:var(--accent-blue)}
+        .preset-thumb img{width:100%;height:100%;object-fit:cover}
+        .preset-label{
+            position:absolute;top:8px;left:8px;background:var(--accent-orange);
+            color:#fff;font-size:10px;font-weight:600;padding:4px 8px;border-radius:4px
+        }
+        .preset-name{
+            margin-top:8px;font-size:12px;color:var(--text-secondary);text-align:center
+        }
+        .preset-item.selected .preset-name{color:var(--text-primary)}
+        .preset-overlay{
+            position:absolute;top:0;left:0;right:0;bottom:0;
+            background:rgba(59,130,246,.3);display:none;align-items:center;
+            justify-content:center;border-radius:var(--border-radius)
+        }
+        .preset-item.selected .preset-overlay{display:flex}
+        .overlay-icon{font-size:24px;color:#fff}
+        .unfold-btn{
+            background:none;border:none;color:var(--text-secondary);font-size:12px;
+            padding:8px 0;cursor:pointer;text-align:center;width:100%;margin-top:8px
+        }
+        .unfold-btn:hover{color:var(--text-primary)}
+        .prompt-section{margin:16px 0}
+        .prompt-label{
+            font-size:14px;font-weight:500;margin-bottom:8px;color:var(--text-primary)
+        }
+        .prompt-label .optional{color:var(--text-secondary);font-weight:400}
+        .prompt-textarea{
+            width:100%;background:var(--bg-card-light);border:var(--border);
+            border-radius:var(--border-radius);padding:12px;color:var(--text-primary);
+            font-size:14px;font-family:inherit;resize:vertical;min-height:100px
+        }
+        .prompt-textarea:focus{outline:none;border-color:var(--accent-blue)}
+        .prompt-textarea::placeholder{color:var(--text-secondary)}
+        .footer-bar{
+            position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
+            border-top:var(--border);padding:12px 16px;display:flex;
+            align-items:center;justify-content:space-between;gap:12px;z-index:100
+        }
+        .footer-left{display:flex;gap:8px;flex:1}
+        .footer-dropdown{
+            flex:1;background:var(--bg-card-light);border:var(--border);
+            border-radius:8px;padding:10px 12px;color:var(--text-primary);
+            font-size:14px;cursor:pointer
+        }
+        .btn-generate{
+            flex:2;background:var(--accent-green);border:none;
+            border-radius:var(--border-radius);padding:14px 24px;color:#fff;
+            font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;height:48px
+        }
+        .btn-generate:hover{background:#059669}
+        .btn-generate:active{transform:scale(.98)}
+        .btn-generate:disabled{opacity:.5;cursor:not-allowed}
+        .file-input{display:none}
+        .video-upload-section{margin-bottom:16px}
+        .message{
+            padding:12px;border-radius:8px;margin-top:12px;font-size:14px
+        }
+        .message-success{background:rgba(16,185,129,.2);color:var(--accent-green)}
+        .message-error{background:rgba(239,68,68,.2);color:#ef4444}
+        .loading{
+            display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+            border-top:2px solid #fff;border-radius:50%;animation:spin 1s linear infinite;margin-left:8px
+        }
+        .wallet-btn{
+            background:var(--bg-card-light);border:var(--border);border-radius:8px;
+            padding:8px 16px;color:var(--text-primary);font-size:14px;cursor:pointer;
+            margin-bottom:12px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px
+        }
+        .wallet-btn:hover{background:var(--bg-card)}
+        .wallet-btn.connected{background:var(--accent-green);color:#fff}
+        .wallet-icon{
+            width:16px;height:16px;object-fit:contain;display:none
+        }
+        .wallet-btn.connected .wallet-icon{display:block}
+        .payment-section{margin:16px 0}
+        .result-page{display:none}
+        .result-page.active{display:block}
+        .result-video{width:100%;border-radius:var(--border-radius);margin:16px 0}
+        .tiktok-input{
+            width:100%;background:var(--bg-card-light);border:var(--border);
+            border-radius:var(--border-radius);padding:12px;color:var(--text-primary);
+            font-size:14px
+        }
+        .tiktok-input:focus{outline:none;border-color:var(--accent-blue)}
+        .tiktok-input::placeholder{color:var(--text-secondary);opacity:.6}
+        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        @media (max-width:480px){
+            .container{padding:0 12px}
+            .card{padding:12px}
+            .footer-bar{padding:10px 12px}
+            .footer-dropdown{font-size:12px;padding:8px 10px}
+            .btn-generate{font-size:14px;padding:12px 20px}
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left"><button class="btn-close" onclick="handleClose()">×</button></div>
+        <div class="header-center">AI Video</div>
+        <div class="header-right"><button class="wallet-btn" id="walletBtn" onclick="connectWallet()" style="padding:6px 12px;font-size:12px;margin:0"><img class="wallet-icon" src="/images/base-icon.png" alt="Base" style="display:none"><span id="walletText">Connect Wallet</span></button></div>
+    </div>
+    <div class="tabs">
+        <button class="tab" onclick="switchTab('text-to-video')">Text to Video</button>
+        <button class="tab" onclick="switchTab('frames')">Frames</button>
+        <button class="tab active" onclick="switchTab('motion-control')">Motion Control</button>
+    </div>
+
+    <!-- Create Page -->
+    <div class="container" id="createPage">
+        <div class="card">
+            <div class="card-title">Add Character Image<span class="icon-info">!</span></div>
+            <div class="upload-area" id="imageUploadArea" onclick="!hasCharacterImage&&triggerImageUpload()">
+                <div class="upload-placeholder">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Upload only JPG and PNG images.<br>File Size &lt; 10M, Dimension &gt; 300px.</div>
+                </div>
+                <div class="upload-preview" id="imagePreview">
+                    <img id="imagePreviewImg" src="" alt="Preview" style="display:none">
+                    <button class="delete-btn" onclick="deleteImage(event)" title="Delete image">×</button>
+                </div>
+            </div>
+            <input type="file" id="imageInput" class="file-input" accept="image/jpeg,image/png,image/jpg" onchange="handleImageUpload(event)">
+        </div>
+        <div class="card">
+            <div class="card-title">Add Motion Video<span class="icon-info">!</span></div>
+            <div class="video-upload-section">
+                <div class="upload-area" id="videoUploadArea" onclick="!hasMotionVideo&&triggerVideoUpload()">
+                    <div class="upload-placeholder">
+                        <div class="upload-icon">▶️</div>
+                        <div class="upload-text">Click to upload video</div>
+                    </div>
+                    <div class="upload-preview" id="videoPreview">
+                        <video id="videoPreviewVideo" src="" style="display:none" onclick="playVideo(event)"></video>
+                        <div class="video-play-overlay" id="videoPlayOverlay" onclick="playVideo(event)">▶</div>
+                        <button class="delete-btn" onclick="deleteVideo(event)" title="Delete video">×</button>
+                    </div>
+                </div>
+                <input type="file" id="videoInput" class="file-input" accept="video/mp4,video/mov" onchange="handleVideoUpload(event)">
+            </div>
+            <div class="preset-grid" id="presetGrid"></div>
+            <button class="unfold-btn" id="unfoldBtn" onclick="toggleUnfold()">unfold ⌄</button>
+            
+            <!-- TikTok Downloader -->
+            <div style="margin-top:16px;padding-top:16px;border-top:var(--border)">
+                <div class="card-title" style="margin-bottom:8px;font-size:14px">Or Download from TikTok</div>
+                <input type="text" class="tiktok-input" id="tiktokUrl" placeholder="paste link to download tiktok video here" onpaste="handleTikTokPaste(event)">
+                <div id="tiktokStatus" style="margin-top:8px;font-size:12px;color:var(--text-secondary)"></div>
+            </div>
+        </div>
+        <div class="prompt-section">
+            <div class="card">
+                <div class="prompt-label">Prompt <span class="optional">(Optional)</span></div>
+                <textarea class="prompt-textarea" id="promptInput" placeholder="When orientation matches the video, complex motions achieve higher performance; when it matches the image, camera movements are better followed."></textarea>
+            </div>
+                </div>
+        <div class="payment-section" style="display:none">
+            <div class="card">
+                <div id="paymentStatus" style="font-size:12px;color:var(--text-secondary);margin-top:8px"></div>
+            </div>
+        </div>
+        <div id="messageArea"></div>
+    </div>
+
+    <!-- Result Page -->
+    <div class="container result-page" id="resultPage">
+        <div class="card">
+            <div class="card-title">Generating Video...</div>
+            <div id="resultStatus" style="text-align:center;padding:32px">
+                <div class="loading" style="margin:0 auto"></div>
+                <div style="margin-top:16px;color:var(--text-secondary)">Processing your video...</div>
+            </div>
+            <video id="resultVideo" class="result-video" controls style="display:none"></video>
+            <div id="resultActions" style="display:none;text-align:center;margin-top:16px">
+                <button class="btn-generate" onclick="downloadResult()">Download Video</button>
+                <button class="wallet-btn" onclick="goBack()" style="margin-top:12px">Create Another</button>
+            </div>
+            <div id="resultRetry" style="display:none;text-align:center;margin-top:16px">
+                <button class="btn-generate" onclick="retryJob()" style="background:var(--accent-blue)">Retry Generation</button>
+                <button class="wallet-btn" onclick="goBack()" style="margin-top:12px">Go Back</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="footer-bar">
+        <div class="footer-left">
+            <select class="footer-dropdown" id="orientationSelect"><option>Matches Video</option><option>Matches Image</option></select>
+            <select class="footer-dropdown" id="qualitySelect"><option>Standard</option><option>Pro</option></select>
+        </div>
+        <button class="btn-generate" id="generateBtn" onclick="handleGenerate()">Generate</button>
+    </div>
+    <script>
+        const PRESETS=[{id:1,name:'Cute Baby Dance',hot:!0,thumbnail:'https://via.placeholder.com/120x160/3b82f6/ffffff?text=Cute+Baby'},{id:2,name:'Expression Control',hot:!0,thumbnail:'https://via.placeholder.com/120x160/10b981/ffffff?text=Expression'},{id:3,name:'OverDrive',hot:!1,thumbnail:'https://via.placeholder.com/120x160/f97316/ffffff?text=OverDrive'},{id:4,name:'Motion 1',hot:!1,thumbnail:'https://via.placeholder.com/120x160/6366f1/ffffff?text=Motion+1'},{id:5,name:'Motion 2',hot:!1,thumbnail:'https://via.placeholder.com/120x160/8b5cf6/ffffff?text=Motion+2'},{id:6,name:'Nezha',hot:!1,thumbnail:'https://via.placeholder.com/120x160/ec4899/ffffff?text=Nezha'},{id:7,name:'Heart Gesture',hot:!1,thumbnail:'https://via.placeholder.com/120x160/f43f5e/ffffff?text=Heart'}],
+        HIDDEN_PRESETS=[{id:8,name:'Motion 3',hot:!1,thumbnail:'https://via.placeholder.com/120x160/14b8a6/ffffff?text=Motion+3'},{id:9,name:'Motion 4',hot:!1,thumbnail:'https://via.placeholder.com/120x160/06b6d4/ffffff?text=Motion+4'}],
+        API={main:()=>'http://localhost:3001',mock:()=>'http://localhost:3002'};
+        let selectedPreset=null,isUnfolded=!1,uploadedImage=null,uploadedVideo=null,hasCharacterImage=!1,hasMotionVideo=!1,
+        imageUrl=null,videoUrl=null,walletConnected=!1,paymentVerified=!1,currentJobId=null,provider=null,signer=null;
+        const BASE_RPC='https://sepolia.base.org',PAYMENT_AMOUNT='0.001',PAYMENT_RECIPIENT='0x0000000000000000000000000000000000000000';
+        document.addEventListener('DOMContentLoaded',()=>{renderPresets();checkServerStatus()});
+        function switchTab(t){
+            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+            event.target.classList.add('active')
+        }
+        function triggerImageUpload(){document.getElementById('imageInput').click()}
+        function triggerVideoUpload(){document.getElementById('videoInput').click()}
+        async function handleImageUpload(e){
+            const f=e.target.files[0];
+            if(!f)return;
+            const inputEl=e.target;
+            if(!f.type.match('image/jpeg')&&!f.type.match('image/png')){showMessage('Please upload JPG or PNG image','error');return}
+            if(f.size>10*1024*1024){showMessage('File size must be less than 10MB','error');return}
+            // DAY 3: Disable input during upload
+            inputEl.disabled=true;
+            // Show preview ngay với local file
+            const reader=new FileReader();
+            reader.onload=(e)=>{uploadedImage=e.target.result;hasCharacterImage=!0;updateImagePreview()};
+            reader.readAsDataURL(f);
+            // Upload lên server
+            const formData=new FormData();formData.append('file',f);formData.append('fieldname','image');
+            try{
+                showMessage('Uploading image...<span class="loading"></span>','success');
+                const r=await fetch(`${API.main()}/api/dancing/upload`,{method:'POST',body:formData});
+                const d=await r.json();
+                if(r.ok){imageUrl=d.url;showMessage('✓ Image uploaded successfully!','success')}
+                else{showMessage(`Upload failed: ${d.error||'Unknown error'} <button onclick="retryImageUpload()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error')}
+            }catch(e){showMessage(`Upload error: ${e.message} <button onclick="retryImageUpload()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error')}finally{inputEl.disabled=false}
+        }
+        async function handleVideoUpload(e){
+            const f=e.target.files[0];
+            if(!f)return;
+            const inputEl=e.target;
+            if(!f.type.match('video/mp4')&&!f.type.match('video/mov')){showMessage('Please upload MP4 or MOV video','error');return}
+            // DAY 3: Disable input during upload
+            inputEl.disabled=true;
+            // Show preview ngay với local file
+            const reader=new FileReader();
+            reader.onload=(e)=>{uploadedVideo=e.target.result;hasMotionVideo=!0;updateVideoPreview()};
+            reader.readAsDataURL(f);
+            // Upload lên server
+            const formData=new FormData();formData.append('file',f);formData.append('fieldname','video');
+            try{
+                showMessage('Uploading video...<span class="loading"></span>','success');
+                const r=await fetch(`${API.main()}/api/dancing/upload`,{method:'POST',body:formData});
+                const d=await r.json();
+                if(r.ok){videoUrl=d.url;showMessage('✓ Video uploaded successfully!','success')}
+                else{showMessage(`Upload failed: ${d.error||'Unknown error'} <button onclick="retryVideoUpload()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error')}
+            }catch(e){showMessage(`Upload error: ${e.message} <button onclick="retryVideoUpload()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error')}finally{inputEl.disabled=false}
+        }
+        function updateImagePreview(){
+            const a=document.getElementById('imageUploadArea'),i=document.getElementById('imagePreviewImg');
+            hasCharacterImage&&uploadedImage?(i.src=uploadedImage,i.style.display='block',a.classList.add('has-file')):(i.src='',i.style.display='none',a.classList.remove('has-file'))
+        }
+        function updateVideoPreview(){
+            const a=document.getElementById('videoUploadArea'),v=document.getElementById('videoPreviewVideo'),o=document.getElementById('videoPlayOverlay');
+            if(hasMotionVideo&&uploadedVideo){
+                v.src=uploadedVideo;v.style.display='block';o.style.display='flex';a.classList.add('has-file');
+                v.addEventListener('play',()=>o.style.display='none');
+                v.addEventListener('pause',()=>o.style.display='flex');
+                v.addEventListener('ended',()=>o.style.display='flex')
+            }else{v.src='';v.style.display='none';o.style.display='none';a.classList.remove('has-file')}
+        }
+        function deleteImage(e){e.stopPropagation();confirm('Delete this image?')&&(uploadedImage=null,imageUrl=null,hasCharacterImage=!1,document.getElementById('imageInput').value='',updateImagePreview())}
+        function deleteVideo(e){e.stopPropagation();confirm('Delete this video?')&&(uploadedVideo=null,videoUrl=null,hasMotionVideo=!1,document.getElementById('videoInput').value='',updateVideoPreview())}
+        function playVideo(e){e.stopPropagation();const v=document.getElementById('videoPreviewVideo');v.paused?v.play():v.pause()}
+        function renderPresets(){
+            const g=document.getElementById('presetGrid'),p=isUnfolded?[...PRESETS,...HIDDEN_PRESETS]:PRESETS;
+            g.innerHTML=p.map(p=>`<div class="preset-item ${selectedPreset===p.id?'selected':''}" onclick="selectPreset(${p.id})"><div class="preset-thumb"><img src="${p.thumbnail}" alt="${p.name}">${p.hot?'<div class="preset-label">Hot</div>':''}<div class="preset-overlay"><span class="overlay-icon">✓</span></div></div><div class="preset-name">${p.name}</div></div>`).join('')
+        }
+        function selectPreset(id){selectedPreset=selectedPreset===id?null:id;renderPresets()}
+        function toggleUnfold(){isUnfolded=!isUnfolded;document.getElementById('unfoldBtn').textContent=isUnfolded?'fold ⌃':'unfold ⌄';renderPresets()}
+        async function connectWallet(){
+            if(typeof window.ethereum==='undefined'){showMessage('Please install MetaMask','error');return}
+            if(typeof ethers==='undefined'){
+                showMessage('Loading ethers.js library... Please wait and try again.','error');
+                setTimeout(()=>{
+                    if(typeof ethers==='undefined'){
+                        showMessage('Failed to load ethers.js. Please refresh the page.','error')
+                    }else{
+                        connectWallet()
+                    }
+                },2000);
+                return
+            }
+            try{
+                provider=new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send('eth_requestAccounts',[]);
+                signer=provider.getSigner();
+                const address=await signer.getAddress();
+                walletConnected=!0;
+                const btn=document.getElementById('walletBtn');
+                const walletText=document.getElementById('walletText');
+                const walletIcon=btn.querySelector('.wallet-icon');
+                walletText.textContent=`${address.slice(0,6)}...${address.slice(-4)}`;
+                if(walletIcon)walletIcon.style.display='block';
+                btn.classList.add('connected');
+                showMessage('Wallet connected','success')
+            }catch(e){showMessage(`Connection failed: ${e.message}`,'error')}
+        }
+        async function verifyPayment(txHash){
+            try{
+                const r=await fetch(`${API.main()}/api/dancing/verify-payment`,{
+                    method:'POST',headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({txHash,amount:PAYMENT_AMOUNT,recipient:PAYMENT_RECIPIENT})
+                });
+                const d=await r.json();
+                if(d.verified){paymentVerified=!0;document.getElementById('paymentStatus').textContent='Payment verified ✓';document.getElementById('paymentStatus').style.color='var(--accent-green)';showMessage('Payment verified!','success');return!0}
+                else{showMessage(`Payment verification failed: ${d.error}`,'error');return!1}
+            }catch(e){showMessage(`Verification error: ${e.message}`,'error');return!1}
+        }
+        async function handleGenerate(){
+            const b=document.getElementById('generateBtn');
+            if(!imageUrl&&!uploadedImage){showMessage('Please upload character image','error');return}
+            if(!videoUrl&&!uploadedVideo&&!selectedPreset){showMessage('Please upload video or select a preset','error');return}
+            if(!walletConnected){showMessage('Please connect wallet first','error');return}
+            if(!paymentVerified){
+                try{
+                    b.disabled=!0;b.innerHTML='Processing payment...<span class="loading"></span>';
+                    showMessage('Processing payment...<span class="loading"></span>','success');
+                    const tx=await signer.sendTransaction({to:PAYMENT_RECIPIENT,value:ethers.utils.parseEther(PAYMENT_AMOUNT.toString())});
+                    showMessage(`Payment sent! TX: ${tx.hash.slice(0,10)}... Verifying...<span class="loading"></span>`,'success');
+                    const verified=await verifyPayment(tx.hash);
+                    if(!verified){b.disabled=!1;b.innerHTML='Generate';return}
+                }catch(e){showMessage(`Payment failed: ${e.message} <button onclick="retryPayment()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error');b.disabled=!1;b.innerHTML='Generate';return}
+            }
+            b.disabled=!0;b.innerHTML='Generating<span class="loading"></span>';
+            try{
+                const i=imageUrl||uploadedImage,v=videoUrl||uploadedVideo||getPresetVideoUrl(selectedPreset),
+                r=await fetch(`${API.main()}/api/dancing/create-job`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_url:i,video_url:v,keep_original_sound:!0})}),
+                d=await r.json();
+                if(r.ok){
+                    currentJobId=d.job_id;
+                    showMessage(`✓ Job created! Generating video...`,'success');
+                    showResultPage();pollJobStatus()
+                }else{
+                    const errMsg=d.error||'Unknown error';
+                    if(errMsg.includes('already have an active job')){
+                        showMessage(`You already have an active job. Please wait for it to complete or go back to check status.`,'error')
+                    }else{
+                        showMessage(`Error: ${errMsg} <button onclick="retryGenerate()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error')
+                    }
+                }
+            }catch(e){showMessage(`Error: ${e.message} <button onclick="retryGenerate()" style="margin-left:8px;padding:4px 8px;background:var(--accent-blue);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px">Retry</button>`,'error')}finally{b.disabled=!1;b.innerHTML='Generate'}
+        }
+        function showResultPage(){
+            document.getElementById('createPage').style.display='none';
+            document.getElementById('resultPage').classList.add('active')
+        }
+        let pollInterval=null;
+        async function pollJobStatus(){
+            if(!currentJobId)return;
+            if(pollInterval)clearInterval(pollInterval);
+            pollInterval=setInterval(async()=>{
+                try{
+                    const r=await fetch(`${API.main()}/api/dancing/job-status/${currentJobId}`);
+                    const d=await r.json();
+                    if(d.status==='completed'&&d.output_url){
+                        clearInterval(pollInterval);
+                        pollInterval=null;
+                        document.getElementById('resultStatus').innerHTML='<div style="color:var(--accent-green);font-size:18px;font-weight:600">✓ Video generated successfully!</div>';
+                        const v=document.getElementById('resultVideo');
+                        v.src=d.output_url;v.style.display='block';
+                        document.getElementById('resultActions').style.display='block';
+                        document.getElementById('resultRetry').style.display='none';
+                        showMessage('✓ Video is ready!','success')
+                    }else if(d.status==='failed'){
+                        clearInterval(pollInterval);
+                        pollInterval=null;
+                        const errorMsg=d.error||'Unknown error';
+                        document.getElementById('resultStatus').innerHTML=`<div style="color:#ef4444;font-size:16px">✗ Generation failed: ${errorMsg}</div>`;
+                        document.getElementById('resultActions').style.display='none';
+                        document.getElementById('resultRetry').style.display='block';
+                        showMessage(`Generation failed: ${errorMsg}`,'error')
+                    }
+                }catch(e){
+                    console.error('Poll error:',e);
+                    showMessage(`Error checking status: ${e.message}`,'error')
+                }
+            },3000)
+        }
+        function retryJob(){
+            if(currentJobId){
+                showResultPage();
+                document.getElementById('resultStatus').innerHTML='<div class="loading" style="margin:0 auto"></div><div style="margin-top:16px;color:var(--text-secondary)">Retrying... Processing your video...</div>';
+                document.getElementById('resultActions').style.display='none';
+                document.getElementById('resultRetry').style.display='none';
+                pollJobStatus()
+            }else{
+                handleGenerate()
+            }
+        }
+        function downloadResult(){
+            const v=document.getElementById('resultVideo');
+            if(v.src){const a=document.createElement('a');a.href=v.src;a.download='ai-dancing-video.mp4';a.click()}
+        }
+        function goBack(){
+            document.getElementById('resultPage').classList.remove('active');
+            document.getElementById('createPage').style.display='block';
+            resetForm()
+        }
+        async function handleTikTokPaste(e){
+            setTimeout(async()=>{
+                const url=e.target.value.trim();
+                if(!url||!url.includes('tiktok.com'))return;
+                const statusEl=document.getElementById('tiktokStatus');
+                statusEl.textContent='Downloading...';
+                statusEl.style.color='var(--text-secondary)';
+                try{
+                    const r=await fetch(`${API.main()}/api/tiktok/download`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+                    const d=await r.json();
+                    if(r.ok){
+                        videoUrl=d.url;uploadedVideo=d.url;hasMotionVideo=!0;updateVideoPreview();
+                        statusEl.textContent='✓ Video downloaded';
+                        statusEl.style.color='var(--accent-green)';
+                        e.target.value='';
+                        showMessage('TikTok video downloaded!','success')
+                    }else{
+                        statusEl.textContent=`✗ ${d.error||'Download failed'}`;
+                        statusEl.style.color='#ef4444'
+                    }
+                }catch(e){
+                    statusEl.textContent=`✗ ${e.message}`;
+                    statusEl.style.color='#ef4444'
+                }
+            },100)
+        }
+        function getPresetVideoUrl(p){return'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'}
+        function resetForm(){
+            uploadedImage=null;uploadedVideo=null;imageUrl=null;videoUrl=null;
+            hasCharacterImage=!1;hasMotionVideo=!1;selectedPreset=null;currentJobId=null;
+            document.getElementById('imageInput').value='';document.getElementById('videoInput').value='';
+            document.getElementById('promptInput').value='';updateImagePreview();updateVideoPreview();renderPresets()
+        }
+        function showMessage(t,type){
+            const a=document.getElementById('messageArea');
+            a.innerHTML=`<div class="message message-${type}">${t}</div>`;
+            setTimeout(()=>a.innerHTML='',type==='error'?8000:5000)
+        }
+        function retryImageUpload(){const input=document.getElementById('imageInput');if(input.files[0])handleImageUpload({target:input})}
+        function retryVideoUpload(){const input=document.getElementById('videoInput');if(input.files[0])handleVideoUpload({target:input})}
+        function retryPayment(){handleGenerate()}
+        function retryGenerate(){handleGenerate()}
+        function handleClose(){confirm('Are you sure you want to close?')&&window.close()}
+        async function checkServerStatus(){try{const r=await fetch(`${API.main()}/health`);if(!r.ok)throw new Error('Server offline')}catch(e){showMessage('Server is offline. Please start the server.','error')}}
+    </script>
+</body>
+</html>
