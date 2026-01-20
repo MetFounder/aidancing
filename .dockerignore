@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.git
+.gitignore
+README.md
+*.md
+uploads
+backend/node_modules
+backend/uploads
+backend/backend
+
